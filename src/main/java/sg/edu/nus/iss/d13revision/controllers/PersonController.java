@@ -43,6 +43,13 @@ public class PersonController {
         return personList;
     }
 
+    @GetMapping(value = "/testRetrieve1", produces = "application/json")
+    public @ResponseBody List<Person> getAllPersons1() {
+        personList = perSvc.getPersons();
+
+        return personList;
+    }
+
     //@RequestMapping(value = "/personList", method = RequestMethod.GET)
     @GetMapping(value = "/personList")
     public String personList(Model model) {
