@@ -13,10 +13,8 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  test:
-  
+  build:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Set up JDK 17
@@ -25,19 +23,32 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
-    - name: Run test with Maven
-      run: mvn -B test
+
+    #Set up Maven cache
+    - name: Cache Maven packages
+      #This action allows caching dependencies and build outputs to improve workflow execution time.
+      uses: actions/cache@v1
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    #Build the application using Maven
+    - name: Build with Maven
+      run: mvn -B package -DskipTests --file pom.xml
+
+    #Build the application using Maven
     - name: Upload JAR
-      # We upload so we can re-use same jar in next job.
+      #This uploads artifacts from your workflow allowing you to share data between jobs and store data once a workflow is complete.
       uses: actions/upload-artifact@v2
       with:
-        #Name of artifact can be anything
+        #Set artifact name
         name: artifact
-        #Relative path to jar file
+        #From this path
         path: target/d13revision-0.0.1-SNAPSHOT.jar
       
   sonar:
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -65,7 +76,7 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=e1327906_cicd
   snyk:
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -83,7 +94,7 @@ jobs:
   #Deploy's job
   deploy:
     #Depends on build's job
-    needs: test
+    needs: build
     name: Deploy to Elastic Beanstalk
     #Will run steps on latest version of ubuntu
     runs-on: ubuntu-latest
